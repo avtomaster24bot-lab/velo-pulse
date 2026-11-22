@@ -65,7 +65,7 @@ def llm_providers(kind="write"):
         out.append(("custom", u if u.endswith("/chat/completions") else u + "/chat/completions",
                     {"Authorization": f"Bearer {key}"}, os.environ.get("LLM_MODEL") or CFG.get("model", "gpt-4o-mini")))
     if CFG.get("use_free_ai", True):
-        out.append(("pollinations", "https://text.pollinations.ai/openai", {}, CFG.get("free_model", "openai")))
+        out.append(("pollinations", "https://text.pollinations.ai/openai", {"Referer": SITE}, CFG.get("free_model", "openai")))
     return out
 
 
@@ -80,6 +80,7 @@ def llm_json(prompt, system="Отвечай только валидным JSON."
                 "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}]}
         if name == "pollinations":
             body["reasoning_effort"] = "low"
+            body["referrer"] = "velo-pulse"
         for attempt in range(5):
             body["seed"] = random.randint(1, 10**6)
             try:
@@ -98,6 +99,9 @@ def llm_json(prompt, system="Отвечай только валидным JSON."
                     continue
                 if r.status_code != 200:
                     log(f"  {name} {r.status_code}: {r.text[:200]}")
+                    if name.startswith("github") and r.status_code in (401, 403, 404):
+                        _exhausted.add(model)
+                        break
                     time.sleep(6)
                     continue
                 content = r.json()["choices"][0]["message"]["content"] or ""
@@ -114,6 +118,10 @@ def llm_json(prompt, system="Отвечай только валидным JSON."
                 return data
             except Exception as e:  # noqa
                 log(f"  {name}: {e}")
+                if name.startswith("github") and "Expecting value" in str(e):
+                    log(f"  {name}: ответ не JSON — отключаю этот провайдер")
+                    _exhausted.add(model)
+                    break
                 time.sleep(5)
     return None
 

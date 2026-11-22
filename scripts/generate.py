@@ -49,7 +49,7 @@ POST_PROMPT = """Рубрика: «{rubric}». Тема: «{title}».
  "caption": "текст поста 600–1000 символов: короткие абзацы, 2–4 уместных эмодзи, конкретные факты, в конце вопрос к подписчикам",
  "hashtags": ["6–8 хэштегов на русском, первым #ВелоПульс"],
  "image_queries": ["3 коротких запроса НА АНГЛИЙСКОМ для поиска фото по теме на Wikimedia Commons, конкретно: предмет, человек, место"],
- "keywords": ["3–6 английских слов — что обязательно должно быть на фото"]
+ "keywords": ["3–6 английских слов/фраз: ПЕРВЫМ — главный объект (имя человека латиницей, название гонки, модель, место), дальше — что ещё должно быть на фото"]
 }}
 В "slides" ровно 4 слайда: 1) суть, 2) самое удивительное/важное, 3) детали или как это работает/как сделать, 4) практический вывод или совет."""
 
@@ -73,6 +73,7 @@ IMG_PROMPT = """Тема поста: «{title}». {hook}
 {cands}
 
 Выбери фото, которые ДЕЙСТВИТЕЛЬНО показывают тему поста (тот самый предмет, человека, гонку, место или действие).
+Если пост о человеке — подходит любое его чёткое фото (гонка, подиум, портрет). Если о гонке или месте — фото этой гонки или места.
 Не подходят: другие люди/места, логотипы, схемы, карты, случайные велосипеды не по теме, музейные таблички.
 Верни JSON: {{"ok": [номера подходящих, от лучшего к худшему, максимум 4]}}"""
 
@@ -198,7 +199,8 @@ def choose_images(post, trusted, wiki_files, queries, kws, need=3):
             for i in commons_info(wiki_files[:30]):
                 if usable(i, 640) and i["file"] not in seen:
                     pool.append(i); seen.add(i["file"])
-        for q in queries[:3]:
+        qs = list(dict.fromkeys([q for q in queries[:3]] + [" ".join(kws[:2]), kws[0] if kws else ""]))
+        for q in [q for q in qs if q.strip()][:5]:
             for i in commons_search(q, 15):
                 if usable(i) and i["file"] not in seen:
                     pool.append(i); seen.add(i["file"])
@@ -209,6 +211,12 @@ def choose_images(post, trusted, wiki_files, queries, kws, need=3):
         j = llm_json(IMG_PROMPT.format(title=post["title"], hook=post.get("hook", ""), kw=", ".join(kws), cands=cands),
                      temperature=0.1, check=lambda d: isinstance(d.get("ok"), list), kind="light")
         ok = [int(x) for x in (j or {}).get("ok", []) if str(x).isdigit() and int(x) < len(pool)]
+        if j is None:  # ИИ не ответил — берём только явные совпадения по ключевым словам
+            ok = [n for n, i in enumerate(pool) if score_kw(i, kws) >= 2][:3]
+        if not ok and kws:  # явное совпадение главного объекта (имя, модель) в имени файла и категориях
+            main = kws[0].lower()
+            ok = [n for n, i in enumerate(pool) if len(main) > 5 and main in (i["file"] + " " + " ".join(i["cats"])).lower()][:3]
+        log(f"  фото: кандидатов {len(pool)}, подошло {len(ok)}")
         for n in ok:
             if len(chosen) >= need:
                 break

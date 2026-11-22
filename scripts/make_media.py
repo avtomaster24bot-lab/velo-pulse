@@ -478,6 +478,8 @@ def main():
         pics = [x for x in (fetch_image(i["url"]) for i in p["images"]) if x is not None]
         if not pics:
             log("  нет картинок"); stats["fail"] += 1; continue
+        photo = f"{s}-photo.jpg"  # своя копия фото для сайта (без хотлинка на Commons)
+        pretty(cover_crop(pics[0], 1200, 900)).save(MEDIA / photo, quality=82)
         n = len(p["slides"]) + 2
         slides = [slide_cover(p, pics[0], n)]
         for i, sl in enumerate(p["slides"], 1):
@@ -508,13 +510,13 @@ def main():
         for f in work.iterdir():
             f.unlink()
         p["voice"] = voice
-        p["files"] = {"slides": names, "previews": [nm.replace(".png", ".jpg") for nm in names], "zip": zp.name, "audio": mp3.name, "audio_bytes": mp3.stat().st_size,
+        p["files"] = {"photo": photo, "slides": names, "previews": [nm.replace(".png", ".jpg") for nm in names], "zip": zp.name, "audio": mp3.name, "audio_bytes": mp3.stat().st_size,
                       "audio_duration": round(duration(mp3), 1)}
         if mp4.exists():
             p["files"].update(video=mp4.name, poster=mp4.with_suffix(".jpg").name, video_duration=round(total, 1),
                               video_mb=round(mp4.stat().st_size / 1e6, 1), synced_subs=synced)
             made += [mp4, mp4.with_suffix(".jpg")]
-        made += [MEDIA / nm for nm in names] + [MEDIA / nm.replace(".png", ".jpg") for nm in names] + [zp, mp3]
+        made += [MEDIA / photo] + [MEDIA / nm for nm in names] + [MEDIA / nm.replace(".png", ".jpg") for nm in names] + [zp, mp3]
         p["post"] = make_post(p)
         stats["ok"] += 1
         log(f"  готово: аудио {p['files']['audio_duration']}s, видео {total:.1f}s")

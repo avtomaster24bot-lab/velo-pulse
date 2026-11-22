@@ -29,7 +29,7 @@
     const img = p.images?.[0];
     const prev = (f.previews || []).map((n, i) => `<img loading="lazy" src="${murl(p, n)}" alt="Слайд ${i + 1}" data-slide="${esc(p.slug)}" data-i="${i}">`).join("");
     return `<article class="card" style="--c:${p.color}">
-      <div class="cover" data-open="${esc(p.slug)}">${img ? `<img loading="lazy" src="${esc(thumb(img.url))}" alt="${esc(p.title)}">` : ""}
+      <div class="cover" data-open="${esc(p.slug)}">${f.photo ? `<img loading="lazy" src="${murl(p, f.photo)}" alt="${esc(p.title)}">` : img ? `<img loading="lazy" src="${esc(thumb(img.url))}" alt="${esc(p.title)}">` : ""}
         <span class="rub">${p.emoji} ${esc(p.rubric_name)}</span>${f.audio_duration ? `<span class="dur">🎧 ${Math.round(f.audio_duration)} с</span>` : ""}</div>
       <div class="body">
         <h3><a href="#/p/${esc(p.slug)}">${esc(p.title)}</a></h3>
@@ -78,7 +78,7 @@
       <div>
         <span class="rub" style="position:static;display:inline-block;background:${p.color}">${p.emoji} ${esc(p.rubric_name)}</span>
         <h2>${esc(p.title)}</h2><p class="hook">${esc(p.hook)}</p>
-        <img class="big" src="${esc(thumb(img.url, 1280))}" alt="${esc(p.title)}">
+        <img class="big" src="${f.photo ? murl(p, f.photo) : esc(img.url)}" alt="${esc(p.title)}">
         <p class="credit">${p.images.map((i) => `<a href="${esc(i.source)}" target="_blank" rel="noopener">${esc(i.credit)}</a>`).join(" · ")}</p>
         <div class="acts" style="margin:14px 0">
           ${f.audio ? `<button class="btn primary" data-play="${esc(p.slug)}">▶ Слушать (${Math.round(f.audio_duration || 0)} с)</button>` : ""}

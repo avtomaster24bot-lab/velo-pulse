@@ -97,7 +97,7 @@ def llm_json(prompt, system="Отвечай только валидным JSON."
             try:
                 r = requests.post(url, json=body, timeout=180,
                                   headers={"Content-Type": "application/json", **headers})
-                if r.status_code in (402, 429):
+                if r.status_code in (402, 429, 503):
                     m = re.search(r"(\d+)\s*s", r.text)
                     wait = int(r.headers.get("retry-after") or (m.group(1) if m else 20))
                     if name.startswith("github") and wait > 120:

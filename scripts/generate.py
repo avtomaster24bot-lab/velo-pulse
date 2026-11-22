@@ -119,7 +119,10 @@ def news_items(rubric):
 
 def article_text(url):
     try:
-        r = S.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) VeloPulse"})
+        r = S.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
+                                            "Accept-Language": "en-US,en;q=0.9"})
+        if not r.ok:
+            log(f"  статья {r.status_code}: {url[:80]}")
         h = r.text
     except Exception as e:  # noqa
         log("article", e)
@@ -148,7 +151,7 @@ def pick_news(rubric, n_want=1):
 Для новинок предпочитай известные бренды и технологии (Shimano, SRAM, Campagnolo, Garmin, Wahoo, Specialized, Trek и т.п.) и гонщиков/гонки мирового уровня. Верни JSON: {{"pick": [номера от лучшего к худшему]}}""",
                  check=lambda d: isinstance(d.get("pick"), list), kind="light")
     order = [int(i) for i in (j or {}).get("pick", []) if str(i).isdigit() and int(i) < len(items)] or list(range(len(items)))
-    return [items[i] for i in order][: max(4, n_want)]
+    return [items[i] for i in order][: max(6, n_want)]
 
 
 def bank_pick(rubric):
@@ -290,6 +293,7 @@ def produce(rubric):
             if len(body) < 400:
                 body = (it["desc"] + "\n" + body).strip()
             if len(body) < 250:
+                log(f"  мало текста ({len(body)} симв.) — {it['link'][:80]}")
                 continue
             pub = it["pub"][:10]
             p = make_item(rubric, it["title"], f"{it['title']}\n{body}", f"{it['source']}, {pub}",

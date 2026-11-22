@@ -1,0 +1,475 @@
+{
+ "name": "ВелоПульс",
+ "site_url": "https://avtomaster24bot-lab.github.io/velo-pulse/",
+ "repo": "avtomaster24bot-lab/velo-pulse",
+ "voice": "ru-RU-DmitryNeural",
+ "voice_alt": "ru-RU-SvetlanaNeural",
+ "use_free_ai": true,
+ "free_model": "openai",
+ "model": "gpt-4o-mini",
+ "telegram_chat": "@velopark_kz",
+ "telegram_mode": "album",
+ "rubrics": {
+  "news": {
+   "name": "Новости велоспорта",
+   "emoji": "📰",
+   "color": "#ff5a36"
+  },
+  "gear": {
+   "name": "Новинки и технологии",
+   "emoji": "⚡",
+   "color": "#22d3ee"
+  },
+  "stars": {
+   "name": "Звёзды и гонки",
+   "emoji": "🏆",
+   "color": "#fbbf24"
+  },
+  "history": {
+   "name": "История и факты",
+   "emoji": "📜",
+   "color": "#c084fc"
+  },
+  "facts": {
+   "name": "Типы велосипедов",
+   "emoji": "🚲",
+   "color": "#a3e635"
+  },
+  "tech": {
+   "name": "Техника",
+   "emoji": "⚙️",
+   "color": "#60a5fa"
+  },
+  "service": {
+   "name": "Обслуживание и ремонт",
+   "emoji": "🔧",
+   "color": "#38bdf8"
+  },
+  "routes": {
+   "name": "Маршруты и путешествия",
+   "emoji": "🗺️",
+   "color": "#34d399"
+  },
+  "health": {
+   "name": "Тренировки и здоровье",
+   "emoji": "💪",
+   "color": "#f472b6"
+  },
+  "safety": {
+   "name": "Безопасность",
+   "emoji": "🦺",
+   "color": "#fb923c"
+  },
+  "hacks": {
+   "name": "Лайфхаки",
+   "emoji": "💡",
+   "color": "#facc15"
+  }
+ },
+ "daily_plan": [
+  [
+   "news"
+  ],
+  [
+   "gear"
+  ],
+  [
+   "stars"
+  ],
+  [
+   "history",
+   "facts",
+   "history"
+  ],
+  [
+   "tech",
+   "service",
+   "service",
+   "tech"
+  ],
+  [
+   "routes"
+  ],
+  [
+   "health",
+   "safety",
+   "hacks"
+  ]
+ ],
+ "news_feeds": [
+  [
+   "Cyclingnews",
+   "https://www.cyclingnews.com/feeds.xml",
+   "news"
+  ],
+  [
+   "VeloNews",
+   "https://www.velonews.com/feed/",
+   "news"
+  ],
+  [
+   "Cycling Weekly",
+   "https://www.cyclingweekly.com/feeds.xml",
+   "news"
+  ],
+  [
+   "road.cc",
+   "https://road.cc/rss",
+   "news"
+  ],
+  [
+   "Bikerumor",
+   "https://bikerumor.com/feed/",
+   "gear"
+  ],
+  [
+   "DC Rainmaker",
+   "https://www.dcrainmaker.com/feed",
+   "gear"
+  ],
+  [
+   "Pinkbike",
+   "https://www.pinkbike.com/pinkbike_xml_feed.php",
+   "gear"
+  ]
+ ],
+ "news_skip": [
+  "deal",
+  "sale",
+  "discount",
+  "black friday",
+  "cyber monday",
+  "% off",
+  "gift guide",
+  "best ",
+  "podcast",
+  "quiz",
+  "crossword",
+  "giveaway",
+  "win a",
+  "coupon",
+  "prime day",
+  "newsletter",
+  "buyer's guide",
+  "buyers guide"
+ ],
+ "star_categories": [
+  [
+   "ru",
+   "Категория:Велогонщики Казахстана",
+   3
+  ],
+  [
+   "ru",
+   "Категория:Победители Тур де Франс",
+   2
+  ],
+  [
+   "ru",
+   "Категория:Победители Джиро д’Италия",
+   1
+  ],
+  [
+   "ru",
+   "Категория:Победители Вуэльты Испании",
+   1
+  ],
+  [
+   "ru",
+   "Категория:Велогонщики СССР",
+   1
+  ]
+ ],
+ "star_pages": [
+  [
+   "ru",
+   "Тур де Франс"
+  ],
+  [
+   "ru",
+   "Джиро д’Италия"
+  ],
+  [
+   "ru",
+   "Вуэльта Испании"
+  ],
+  [
+   "ru",
+   "Париж — Рубе"
+  ],
+  [
+   "ru",
+   "Милан — Сан-Ремо"
+  ],
+  [
+   "ru",
+   "Тур Фландрии"
+  ],
+  [
+   "ru",
+   "Льеж — Бастонь — Льеж"
+  ],
+  [
+   "ru",
+   "Джиро ди Ломбардия"
+  ],
+  [
+   "ru",
+   "Часовой рекорд"
+  ],
+  [
+   "ru",
+   "Велоспорт на летних Олимпийских играх"
+  ],
+  [
+   "ru",
+   "Astana Qazaqstan Team"
+  ],
+  [
+   "ru",
+   "Тур Алматы"
+  ],
+  [
+   "ru",
+   "Велоспорт на треке"
+  ],
+  [
+   "ru",
+   "Кейрин"
+  ],
+  [
+   "ru",
+   "Маунтинбайк"
+  ],
+  [
+   "ru",
+   "BMX"
+  ],
+  [
+   "ru",
+   "Велокросс"
+  ],
+  [
+   "ru",
+   "Чемпионат мира по шоссейному велоспорту"
+  ],
+  [
+   "ru",
+   "Велогонка Мира"
+  ],
+  [
+   "en",
+   "Race Across America"
+  ],
+  [
+   "en",
+   "Transcontinental Race"
+  ],
+  [
+   "en",
+   "Red Bull Rampage"
+  ],
+  [
+   "en",
+   "Unbound Gravel"
+  ],
+  [
+   "en",
+   "Tour Down Under"
+  ],
+  [
+   "en",
+   "Strade Bianche"
+  ]
+ ],
+ "wiki_topics": {
+  "health": [
+   [
+    "en",
+    "Cadence (cycling)"
+   ],
+   [
+    "en",
+    "Interval training"
+   ],
+   [
+    "en",
+    "Health effects of cycling"
+   ],
+   [
+    "en",
+    "Hitting the wall"
+   ],
+   [
+    "en",
+    "Indoor cycling"
+   ],
+   [
+    "en",
+    "Bicycle saddle"
+   ],
+   [
+    "en",
+    "Cycling shoe"
+   ],
+   [
+    "en",
+    "Clipless pedal"
+   ],
+   [
+    "en",
+    "Bicycle commuting"
+   ],
+   [
+    "en",
+    "Heart rate monitor"
+   ],
+   [
+    "en",
+    "Altitude training"
+   ],
+   [
+    "en",
+    "Delayed onset muscle soreness"
+   ],
+   [
+    "en",
+    "Bicycle trainer"
+   ],
+   [
+    "en",
+    "Cycling power meter"
+   ],
+   [
+    "en",
+    "Sports nutrition"
+   ],
+   [
+    "en",
+    "Electric bicycle"
+   ],
+   [
+    "en",
+    "Bicycle touring"
+   ],
+   [
+    "en",
+    "Bikepacking"
+   ]
+  ],
+  "safety": [
+   [
+    "en",
+    "Bicycle helmet"
+   ],
+   [
+    "en",
+    "Bicycle lighting"
+   ],
+   [
+    "en",
+    "Dooring"
+   ],
+   [
+    "en",
+    "Bicycle safety"
+   ],
+   [
+    "en",
+    "Retroreflector"
+   ],
+   [
+    "en",
+    "Bicycle lock"
+   ],
+   [
+    "en",
+    "Bicycle theft"
+   ],
+   [
+    "en",
+    "Segregated cycle facilities"
+   ],
+   [
+    "en",
+    "Bicycle brake"
+   ],
+   [
+    "en",
+    "Vehicular cycling"
+   ],
+   [
+    "en",
+    "High-visibility clothing"
+   ],
+   [
+    "en",
+    "Bicycle bell"
+   ],
+   [
+    "en",
+    "Cycling glove"
+   ]
+  ],
+  "hacks": [
+   [
+    "en",
+    "Bicycle tire"
+   ],
+   [
+    "en",
+    "Tubeless tire"
+   ],
+   [
+    "en",
+    "Bicycle chain"
+   ],
+   [
+    "en",
+    "Bicycle pump"
+   ],
+   [
+    "en",
+    "Bicycle saddle"
+   ],
+   [
+    "en",
+    "Bicycle gearing"
+   ],
+   [
+    "en",
+    "Folding bicycle"
+   ],
+   [
+    "en",
+    "Bicycle parking"
+   ],
+   [
+    "en",
+    "Bicycle trailer"
+   ],
+   [
+    "en",
+    "Pannier"
+   ],
+   [
+    "en",
+    "Mudguard"
+   ],
+   [
+    "en",
+    "Bicycle kickstand"
+   ],
+   [
+    "en",
+    "Bicycle tools"
+   ],
+   [
+    "en",
+    "Bicycle wheel"
+   ]
+  ]
+ },
+ "gh_model_write": "openai/gpt-4.1",
+ "gh_model": "openai/gpt-4.1-mini"
+}

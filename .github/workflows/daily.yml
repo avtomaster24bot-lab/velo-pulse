@@ -1,0 +1,123 @@
+name: Ежедневный ВелоПульс
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # 08:00 по Алматы
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Пересобрать подборку за сегодня"
+        type: boolean
+        default: false
+      force_media:
+        description: "Пересобрать слайды, аудио и видео"
+        type: boolean
+        default: false
+      skip_telegram:
+        description: "Не отправлять в Telegram"
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths-ignore: ["data/**", "feed.xml"]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  models: read
+
+concurrency:
+  group: velo-pulse
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ vars.TELEGRAM_CHAT_ID || '@velopark_kz' }}
+      TELEGRAM_SEND_VIDEO: ${{ vars.TELEGRAM_SEND_VIDEO }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Установить ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null
+      - run: pip install -r requirements.txt
+      - name: Написать посты дня
+        working-directory: scripts
+        env:
+          GITHUB_MODELS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LLM_API_URL: ${{ secrets.LLM_API_URL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          FORCE: ${{ inputs.force && '1' || '0' }}
+        run: python generate.py
+      - name: Слайды, аудио и видео
+        working-directory: scripts
+        env:
+          MEDIA_FORCE: ${{ (inputs.force || inputs.force_media) && '1' || '0' }}
+        run: python make_media.py
+      - name: Сохранить в репозиторий
+        run: |
+          git config user.name "velo-pulse-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data feed.xml
+          if git diff --cached --quiet; then echo "Нет изменений"; else
+            git commit -m "ВелоПульс за $(TZ=Asia/Almaty date +%F)"
+            git pull --rebase origin main && git push
+          fi
+      - name: Отправить в Telegram
+        if: ${{ env.TELEGRAM_BOT_TOKEN != '' && !inputs.skip_telegram }}
+        working-directory: scripts
+        run: python telegram.py
+      - name: Сохранить журнал Telegram
+        if: always()
+        run: |
+          if [ -f data/telegram.json ]; then
+            git add data/telegram.json
+            git diff --cached --quiet || { git commit -m "Журнал Telegram"; git pull --rebase origin main && git push; }
+          fi
+
+  deploy:
+    needs: digest
+    if: always() && (needs.digest.result == 'success' || needs.digest.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: https://avtomaster24bot-lab.github.io/velo-pulse/
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Собрать сайт
+        run: |
+          mkdir -p _site/media
+          cp -r index.html app.js style.css assets data feed.xml .nojekyll _site/ 2>/dev/null || true
+          rm -rf _site/assets/fonts
+          days=""
+          # медиа за последние 10 дней кладём на сайт (более старые — по ссылке на GitHub Release)
+          for d in $(python3 -c "import json;print(' '.join(x['date'] for x in json.load(open('data/index.json'))['days'][:10]))"); do
+            if gh release download "day-$d" -p "*" -D _site/media --skip-existing 2>/dev/null; then days="$days\"$d\","; else echo "нет медиа за $d"; fi
+          done
+          echo "{\"days\":[${days%,}]}" > _site/media/days.json
+          cat _site/media/days.json; du -sh _site _site/media
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - if: steps.deployment.outcome == 'failure'
+        run: sleep 30
+      - if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4

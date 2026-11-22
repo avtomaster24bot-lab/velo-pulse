@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ВелоПульс — вело-контент каждый день</title>
+<meta name="description" content="Каждый день 7 постов о велосипедах: новости велоспорта, техника, ремонт, маршруты, история, тренировки и безопасность. С аудио, слайдами-каруселью и вертикальными видео.">
+<meta property="og:title" content="ВелоПульс — вело-контент каждый день">
+<meta property="og:description" content="Новости, техника, маршруты, история и лайфхаки — с аудио, слайдами и видео.">
+<meta name="theme-color" content="#0c0e14">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="alternate" type="application/rss+xml" title="ВелоПульс" href="feed.xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-in">
+    <a href="#/" class="brand"><img src="assets/logo.svg" alt="" width="36" height="36"><span>Вело<b>Пульс</b></span></a>
+    <nav class="nav">
+      <a href="#/" data-nav="today">Сегодня</a>
+      <a href="#/archive" data-nav="archive">Архив</a>
+      <a href="https://t.me/velopark_kz" target="_blank" rel="noopener">Telegram</a>
+      <a href="feed.xml" class="rss" title="RSS / подкаст">RSS</a>
+    </nav>
+  </div>
+</header>
+<section class="hero">
+  <div class="wrap">
+    <h1>Пульс велосипедного мира — <span class="grad">каждый день</span></h1>
+    <p class="sub">Свежие новости велоспорта, техника и ремонт, маршруты от Алматы до Альп, легенды гонок, тренировки и лайфхаки. У каждого поста — аудио-рассказ, карусель слайдов и вертикальное видео для Reels, Shorts и TikTok.</p>
+    <div class="hero-actions"><button class="btn primary" id="playAll">▶ Слушать подборку дня</button><span id="updated" class="muted"></span></div>
+  </div>
+</section>
+<main class="wrap">
+  <div class="chips" id="chips"></div>
+  <div id="view"><div class="loading">Загружаю подборку…</div></div>
+</main>
+<footer class="foot wrap">
+  <p>ВелоПульс обновляется автоматически каждый день в 08:00 (Алматы). Тексты пишет ИИ строго по указанным источникам и проверяет вторым проходом; фото — Wikimedia Commons со свободными лицензиями, авторы указаны у каждого поста. Нашли ошибку — проверьте источник по ссылке.</p>
+  <p>Проекты семьи: <a href="https://avtomaster24bot-lab.github.io/velo-universe/">Вело-вселенная</a> · <a href="https://avtomaster24bot-lab.github.io/velopark/">Velopark — маршруты</a> · <a href="https://avtomaster24bot-lab.github.io/velomarket/">VeloMarket</a></p>
+</footer>
+<div id="player" class="player hidden">
+  <button id="plPrev" title="Назад">⏮</button>
+  <div class="pl-info"><b id="plTitle"></b><small id="plSub"></small></div>
+  <audio id="plAudio" controls preload="none"></audio>
+  <button id="plNext" title="Дальше">⏭</button>
+  <button id="plClose" title="Закрыть">✕</button>
+</div>
+<div id="modal" class="modal hidden"><div class="modal-in"><button class="modal-x" data-close="1">✕</button><div id="modalBody"></div></div></div>
+<div id="toast" class="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>

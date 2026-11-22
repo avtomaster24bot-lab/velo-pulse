@@ -1,0 +1,5 @@
+requests>=2.31
+edge-tts>=6.1.12
+gTTS>=2.5
+Pillow>=10
+json-repair>=0.30

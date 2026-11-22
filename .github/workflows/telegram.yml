@@ -1,0 +1,50 @@
+name: Отправить в Telegram
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Дата подборки (ГГГГ-ММ-ДД), пусто — последняя"
+        required: false
+        default: ""
+      send_video:
+        description: "Отправить ещё и вертикальные видео"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: velo-pulse
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ vars.TELEGRAM_CHAT_ID || '@velopark_kz' }}
+      TELEGRAM_SEND_VIDEO: ${{ inputs.send_video && '1' || vars.TELEGRAM_SEND_VIDEO }}
+      TELEGRAM_DATE: ${{ inputs.date }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Скачать медиа
+        run: |
+          d="${TELEGRAM_DATE:-$(python3 -c "import json;print(json.load(open('data/index.json'))['days'][0]['date'])")}"
+          mkdir -p media && gh release download "day-$d" -p "*.png" -p "*.mp3" -p "*.mp4" -D media
+      - name: Отправить
+        working-directory: scripts
+        run: python telegram.py
+      - name: Сохранить журнал
+        if: always()
+        run: |
+          git config user.name "velo-pulse-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/telegram.json 2>/dev/null || true
+          git diff --cached --quiet || { git commit -m "Журнал Telegram"; git pull --rebase origin main && git push; }

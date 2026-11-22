@@ -58,11 +58,14 @@ jobs:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_MODEL: ${{ secrets.LLM_MODEL }}
           FORCE: ${{ inputs.force && '1' || '0' }}
+          GEN_BUDGET_MIN: "35"
+        timeout-minutes: 50
         run: python generate.py
       - name: Слайды, аудио и видео
         working-directory: scripts
         env:
           MEDIA_FORCE: ${{ (inputs.force || inputs.force_media) && '1' || '0' }}
+        timeout-minutes: 30
         run: python make_media.py
       - name: Сохранить в репозиторий
         run: |

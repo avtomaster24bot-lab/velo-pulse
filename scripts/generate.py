@@ -125,7 +125,12 @@ def article_text(url):
         log("article", e)
         return ""
     h = re.sub(r"(?is)<(script|style|aside|nav|footer|figure)[^>]*>.*?</\1>", " ", h)
-    paras = [strip_tags(p) for p in re.findall(r"(?is)<p[^>]*>(.*?)</p>", h)]
+    paras = []
+    for p in re.findall(r"(?is)<p[^>]*>(.*?)</p>", h):
+        p = strip_tags(p)
+        if re.search(r"(?i)(direct to your inbox|please log ?out|sign up for|join now|related articles|most popular)", p):
+            break  # дальше обычно подвал, био автора и ссылки на другие статьи
+        paras.append(p)
     paras = [re.sub(r"\s+", " ", p) for p in paras if len(p) > 70 and not re.search(r"(?i)(cookie|subscribe|sign up|newsletter|affiliate|commission|©)", p)]
     return "\n".join(paras)[:6000]
 
@@ -139,7 +144,8 @@ def pick_news(rubric, n_want=1):
     lst = "\n".join(f"{i}. [{x['source']}] {x['title']} — {x['desc'][:160]}" for i, x in enumerate(items))
     j = llm_json(f"""Вот свежие заголовки вело-медиа:\n{lst}\n\nВыбери 4 новости, которые будут интереснее всего широкой
 русскоязычной аудитории любителей велосипеда (громкие события, звёзды, необычные истории, полезные новинки).
-Не бери рекламу, скидки, обзоры-подборки «лучших», платный контент. Верни JSON: {{"pick": [номера от лучшего к худшему]}}""",
+Не бери рекламу, розыгрыши, скидки, обзоры-подборки «лучших», платный контент, локальные мелкие события.
+Для новинок предпочитай известные бренды и технологии (Shimano, SRAM, Campagnolo, Garmin, Wahoo, Specialized, Trek и т.п.) и гонщиков/гонки мирового уровня. Верни JSON: {{"pick": [номера от лучшего к худшему]}}""",
                  check=lambda d: isinstance(d.get("pick"), list), kind="light")
     order = [int(i) for i in (j or {}).get("pick", []) if str(i).isdigit() and int(i) < len(items)] or list(range(len(items)))
     return [items[i] for i in order][: max(4, n_want)]
@@ -293,6 +299,13 @@ def produce(rubric):
             if p:
                 USED["links"].append(it["link"])
                 return p
+        if rubric == "gear":  # новинку с подходящим свободным фото не нашли — берём тему из справочника техники
+            log("  новинки без подходящих фото — беру тему «Техника» из справочника")
+            for b in bank_pick("tech"):
+                p = make_item("tech", b["title"], b["text"], "справочник «Вело-вселенная»", b["src"], trusted=b["photos"], uid=b["id"],
+                              extra="Подай как разбор технологии: как работает, чем полезна, на что смотреть при выборе.")
+                if p:
+                    return p
         return None
     if rubric in ("stars", "health", "safety") or (rubric == "hacks" and RNG.random() < 0.5):
         for lang, t in wiki_candidates(rubric):
@@ -355,7 +368,11 @@ def main():
     if ONLY:
         plan = ONLY
     posts = []
+    from common import over_budget
     for rub in plan:
+        if over_budget() and posts:
+            log("Время вышло — публикую то, что готово")
+            break
         try:
             p = produce(rub)
         except Exception as e:  # noqa

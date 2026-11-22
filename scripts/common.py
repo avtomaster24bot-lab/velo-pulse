@@ -70,10 +70,19 @@ def llm_providers(kind="write"):
 
 
 _exhausted = set()
+START = time.time()
+BUDGET = float(os.environ.get("GEN_BUDGET_MIN") or 40) * 60  # общий лимит времени на ИИ, чтобы workflow не висел
+
+
+def over_budget():
+    return time.time() - START > BUDGET
 LLM_STATS = {}
 
 
 def llm_json(prompt, system="Отвечай только валидным JSON.", temperature=0.6, check=None, kind="write"):
+    if over_budget():
+        log("  лимит времени на ИИ исчерпан")
+        return None
     for name, url, headers, model in llm_providers(kind):
         body = {"model": model, "temperature": temperature, "response_format": {"type": "json_object"},
                 "max_tokens": 6000,
@@ -81,7 +90,9 @@ def llm_json(prompt, system="Отвечай только валидным JSON."
         if name == "pollinations":
             body["reasoning_effort"] = "low"
             body["referrer"] = "velo-pulse"
-        for attempt in range(5):
+        for attempt in range(3):
+            if over_budget():
+                return None
             body["seed"] = random.randint(1, 10**6)
             try:
                 r = requests.post(url, json=body, timeout=180,
@@ -104,7 +115,11 @@ def llm_json(prompt, system="Отвечай только валидным JSON."
                         break
                     time.sleep(6)
                     continue
-                content = r.json()["choices"][0]["message"]["content"] or ""
+                try:
+                    content = r.json()["choices"][0]["message"]["content"] or ""
+                except Exception:
+                    log(f"  {name}: неожиданный ответ: {r.text[:160]!r}")
+                    raise ValueError("Expecting value: ответ не JSON")
                 LLM_STATS[name] = LLM_STATS.get(name, 0) + 1
                 m = re.search(r"\{.*\}", content, re.S)
                 raw = m.group(0) if m else content
@@ -113,6 +128,8 @@ def llm_json(prompt, system="Отвечай только валидным JSON."
                 except Exception:
                     from json_repair import repair_json
                     data = json.loads(repair_json(raw))
+                if name.startswith("github") and not isinstance(data, dict):
+                    raise ValueError("Expecting value: не JSON")
                 if check and not check(data):
                     raise ValueError("неполный JSON")
                 return data

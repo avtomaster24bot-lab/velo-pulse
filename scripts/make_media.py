@@ -150,11 +150,11 @@ def brand_right(img, y, size=36):
 
 # ------------------------------------------------------------------ картинки
 def fetch_image(url):
-    for a in range(4):
+    for a in range(6):
         try:
             r = requests.get(url, timeout=60, headers={"User-Agent": UA})
             if r.status_code == 429:
-                time.sleep(5 * (a + 1)); continue
+                time.sleep(8 * 2 ** a); continue
             r.raise_for_status()
             return Image.open(io.BytesIO(r.content)).convert("RGB")
         except Exception as e:  # noqa
@@ -287,15 +287,17 @@ async def _tts(text, mp3, voice):
 
 
 def tts(text, mp3, voice):
-    for a in range(4):
-        try:
-            return asyncio.run(_tts(text, mp3, voice))
-        except Exception as e:  # noqa
-            log("  edge-tts:", e)
-            time.sleep(4 * (a + 1))
+    """Возвращает (тайминги слов, фактический голос). Если голос не озвучил текст — пробуем второй, затем gTTS."""
+    for v in [voice] + [x for x in VOICES if x != voice]:
+        for a in range(3):
+            try:
+                return asyncio.run(_tts(text, mp3, v)), v
+            except Exception as e:  # noqa
+                log(f"  edge-tts {v}:", e)
+                time.sleep(3 * (a + 1))
     from gtts import gTTS  # запасной вариант
     gTTS(text, lang="ru").save(str(mp3))
-    return []
+    return [], "gTTS"
 
 
 def duration(path):
@@ -495,7 +497,7 @@ def main():
             z.writestr("текст-поста.txt", make_post(p)["full"])
         mp3 = MEDIA / f"{s}.mp3"
         voice = VOICES[k % len(VOICES)]
-        words = tts(p["narration"], mp3, voice)
+        words, voice = tts(p["narration"], mp3, voice)
         mp4 = MEDIA / f"{s}.mp4"
         work = MEDIA / "_work"
         work.mkdir(exist_ok=True)
@@ -516,6 +518,7 @@ def main():
         p["post"] = make_post(p)
         stats["ok"] += 1
         log(f"  готово: аудио {p['files']['audio_duration']}s, видео {total:.1f}s")
+        save_json(dp, day)
     if made and os.environ.get("NO_RELEASE") != "1":
         base = upload_release(date, made)
         for p in day["posts"]:

@@ -1,0 +1,39 @@
+name: Проверка конвейера (без публикации)
+
+on:
+  workflow_dispatch:
+    inputs:
+      rubrics:
+        description: "Рубрики через запятую"
+        default: "news,routes"
+
+permissions:
+  contents: read
+  models: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null
+      - run: pip install -r requirements.txt
+      - name: Пост(ы) для тестовой даты
+        working-directory: scripts
+        env:
+          GITHUB_MODELS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIGEST_DATE: "2000-01-01"
+          ONLY_RUBRICS: ${{ inputs.rubrics }}
+          GEN_BUDGET_MIN: "20"
+        run: python generate.py
+      - name: Медиа (без загрузки)
+        working-directory: scripts
+        env:
+          MEDIA_DATE: "2000-01-01"
+          NO_RELEASE: "1"
+        run: python make_media.py && ls -la ../media | head -30

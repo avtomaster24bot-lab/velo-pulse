@@ -471,7 +471,7 @@ def main():
     MEDIA.mkdir(exist_ok=True)
     made, stats = [], {"ok": 0, "fail": 0}
     for k, p in enumerate(day["posts"][:limit] if limit else day["posts"]):
-        if p.get("files") and not force and (MEDIA / p["files"]["video"]).exists():
+        if p.get("files") and not force and (p.get("release") or (MEDIA / p["files"]["video"]).exists()):
             continue
         log(f"медиа: {p['title']}")
         s = p["slug"]

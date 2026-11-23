@@ -63,3 +63,4 @@ a{color:#ffb38f}a:hover{color:#fff}
 .grid{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
 .btn.sm{font-size:14px;padding:9px 14px}
 .mainvid{max-width:420px;margin:6px auto 0}.mainvid video{width:100%;aspect-ratio:9/16;border-radius:16px;background:#000;display:block}
+.vid .rub{display:none}

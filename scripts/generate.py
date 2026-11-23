@@ -101,6 +101,7 @@ def news_items(rubric):
             title = strip_tags(it.findtext("title") or "")
             link = (it.findtext("link") or "").strip()
             desc = strip_tags(it.findtext("description") or "")[:600]
+            full = strip_tags(it.findtext("{http://purl.org/rss/1.0/modules/content/}encoded") or "")
             try:
                 pub = email.utils.parsedate_to_datetime(it.findtext("pubDate") or "")
             except Exception:  # noqa
@@ -113,6 +114,7 @@ def news_items(rubric):
             if any(w in low for w in skip):
                 continue
             out.append({"source": name, "title": title, "link": link, "desc": desc,
+                        "full": full[:7000] if len(full) >= 500 else "",
                         "pub": pub.isoformat() if pub else ""})
     return out
 
@@ -289,7 +291,7 @@ def produce(rubric):
     """Пытается сделать пост рубрики; при неудаче берёт следующий кандидат."""
     if rubric in ("news", "gear"):
         for it in pick_news(rubric):
-            body = article_text(it["link"]) or it["desc"]
+            body = it.get("full") or article_text(it["link"]) or it["desc"]
             if len(body) < 400:
                 body = (it["desc"] + "\n" + body).strip()
             if len(body) < 250:

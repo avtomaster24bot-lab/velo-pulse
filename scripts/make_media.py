@@ -37,7 +37,10 @@ TXT = (244, 246, 250)
 MUT = (168, 176, 192)
 ORANGE = (255, 90, 54)
 SITE_SHORT = SITE.replace("https://", "").rstrip("/")
-VOICES = [CFG.get("voice", "ru-RU-DmitryNeural"), CFG.get("voice_alt", "ru-RU-SvetlanaNeural")]
+VOICE = CFG.get("voice", "ru-RU-DmitryNeural")      # всегда мужской голос
+MUSIC_DIR = ROOT / "assets" / "music"
+MUSIC = json.loads((MUSIC_DIR / "credits.json").read_text(encoding="utf-8"))
+MUSIC_VOL = float(CFG.get("music_volume", 0.32))     # громкость музыки до «приглушения» под голосом
 _fc = {}
 
 
@@ -286,18 +289,51 @@ async def _tts(text, mp3, voice):
     return words
 
 
-def tts(text, mp3, voice):
-    """Возвращает (тайминги слов, фактический голос). Если голос не озвучил текст — пробуем второй, затем gTTS."""
-    for v in [voice] + [x for x in VOICES if x != voice]:
+def _clean_tts(text):
+    t = text.replace("’", "'").replace("‑", "-").replace("–", "—")
+    return re.sub(r"[«»\"]", "", t)
+
+
+def tts(text, mp3, voice=None):
+    """Мужской голос всегда. Порядок: весь текст → очищенный текст → по предложениям (склеиваем mp3 и тайминги)."""
+    voice = voice or VOICE
+    for variant in (text, _clean_tts(text)):
         for a in range(3):
             try:
-                return asyncio.run(_tts(text, mp3, v)), v
+                w = asyncio.run(_tts(variant, mp3, voice))
+                if len(w) < 0.85 * len(variant.split()):  # поток оборвался — озвучено не всё
+                    raise RuntimeError(f"озвучено {len(w)} из {len(variant.split())} слов")
+                return w, voice
             except Exception as e:  # noqa
-                log(f"  edge-tts {v}:", e)
+                log(f"  edge-tts {voice}:", e)
                 time.sleep(3 * (a + 1))
-    from gtts import gTTS  # запасной вариант
-    gTTS(text, lang="ru").save(str(mp3))
-    return [], "gTTS"
+    # по предложениям: edge-tts иногда «спотыкается» на длинном тексте целиком
+    parts = [x for x in re.split(r"(?<=[.!?])\s+", _clean_tts(text)) if x.strip()]
+    words, buf, offset = [], bytearray(), 0.0
+    tmp = Path(str(mp3) + ".part.mp3")
+    for part in parts:
+        for a in range(4):
+            try:
+                w = asyncio.run(_tts(part, tmp, voice))
+                break
+            except Exception as e:  # noqa
+                log(f"  edge-tts (фраза) {voice}:", e)
+                time.sleep(4 * (a + 1))
+        else:
+            raise RuntimeError("edge-tts не озвучил фразу: " + part[:60])
+        words += [(x + offset, y + offset, t) for x, y, t in w]
+        buf.extend(tmp.read_bytes())
+        offset += duration(tmp)
+    tmp.unlink(missing_ok=True)
+    Path(mp3).write_bytes(bytes(buf))
+    return words, voice
+
+
+def pick_music(date, k):
+    """Разные треки для всех клипов дня; по дням пул прокручивается."""
+    import datetime as _dt
+    day_no = _dt.date.fromisoformat(date).toordinal()
+    return MUSIC[(day_no * 7 + k) % len(MUSIC)]
 
 
 def duration(path):
@@ -364,7 +400,7 @@ def subtitle_png(text, path, col):
     return im.height
 
 
-def video_frame(slide, bgpic, p):
+def video_frame(slide, bgpic, p, music=None):
     bg = cover_crop(bgpic, VW, VH).filter(ImageFilter.GaussianBlur(40))
     bg = ImageEnhance.Brightness(bg).enhance(0.35).convert("RGBA")
     sh = Image.new("RGBA", (SW + 40, SH + 40), (0, 0, 0, 0))
@@ -375,10 +411,14 @@ def video_frame(slide, bgpic, p):
     brand(bg, (60, 62), 40)
     ef = font("SemiBold", 30)
     d.text((VW - 60 - d.textlength(p["rubric_name"], font=ef), 66), p["rubric_name"], font=ef, fill=hexrgb(p["color"]))
+    if music:
+        mf = font("SemiBold", 26)
+        for j, line in enumerate([f"Музыка: «{music['title']}» — Kevin MacLeod (incompetech.com)", "Лицензия CC BY 4.0"]):
+            d.text(((VW - d.textlength(line, font=mf)) / 2, 1600 + j * 38), line, font=mf, fill=(220, 224, 232))
     return bg
 
 
-def build_video(p, slides, bgpic, audio, words, out, work):
+def build_video(p, slides, bgpic, audio, words, out, work, music=None):
     col = hexrgb(p["color"])
     adur = duration(audio)
     tempo = 1.0
@@ -394,7 +434,7 @@ def build_video(p, slides, bgpic, audio, words, out, work):
     inputs, filt = [], []
     for i, (sl, du) in enumerate(zip(slides, durs)):
         fp = work / f"f{i}.png"
-        video_frame(sl, bgpic, p).convert("RGB").save(fp)
+        video_frame(sl, bgpic, p, music if i == n - 1 else None).convert("RGB").save(fp)
         inputs += ["-loop", "1", "-framerate", str(FPS), "-t", f"{du:.3f}", "-i", str(fp)]
         z = "1+0.04*t/%.3f" % du
         filt.append(f"[{i}:v]scale={VW}:{VH},setsar=1,format=yuv420p,fps={FPS}[v{i}]")
@@ -414,8 +454,21 @@ def build_video(p, slides, bgpic, audio, words, out, work):
         filt.append(f"[{prev}][{si + k}:v]overlay=0:{1660 - h // 2}:enable='between(t,{ta:.2f},{tb:.2f})'[s{k}]")
         prev = f"s{k}"
     at = f"atempo={tempo:.4f}," if tempo != 1.0 else ""
-    filt.append(f"[{n}:a]{at}adelay={int(LEAD * 1000)}|{int(LEAD * 1000)},apad[aout]")
-    cmd = ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", *inputs, "-i", str(audio), *sub_in,
+    d0 = int(LEAD * 1000)
+    music_in = []
+    if music:
+        # голос + тихая музыка: музыка приглушается под голосом (sidechain), плавное появление и затухание
+        mi = si + len(chunks)
+        music_in = ["-i", str(MUSIC_DIR / music["file"])]
+        filt.append(f"[{n}:a]{at}adelay={d0}|{d0},apad,aresample=44100,aformat=channel_layouts=stereo,"
+                    f"loudnorm=I=-16:TP=-1.5:LRA=11,asplit=2[voice][sc]")
+        filt.append(f"[{mi}:a]aresample=44100,aformat=channel_layouts=stereo,volume={MUSIC_VOL},"
+                    f"afade=t=in:st=0:d=1.2,afade=t=out:st={max(total - 2.5, 0):.2f}:d=2.5[mus]")
+        filt.append("[mus][sc]sidechaincompress=threshold=0.05:ratio=4:attack=20:release=400:makeup=1[duck]")
+        filt.append("[voice][duck]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[aout]")
+    else:
+        filt.append(f"[{n}:a]{at}adelay={d0}|{d0},apad[aout]")
+    cmd = ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", *inputs, "-i", str(audio), *sub_in, *music_in,
            "-filter_complex", ";".join(filt), "-map", f"[{prev}]", "-map", "[aout]", "-t", f"{total:.2f}", "-r", str(FPS),
            "-c:v", "libx264", "-preset", "medium", "-crf", "24", "-profile:v", "high", "-pix_fmt", "yuv420p",
            "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-movflags", "+faststart", str(out)]
@@ -436,10 +489,11 @@ def make_post(p):
     if len(caption) > 2150:
         caption = caption[:2000].rsplit(" ", 1)[0] + "…\n\n" + tags
     yt_title = (p["title"][:85] + " #shorts")[:100]
-    yt_desc = (f"{p.get('hook', '')}\n\n{p['caption']}\n\n{src}\n📷 {cred}\n\n"
+    mus = f"\n🎵 {p['music']['attribution']}" if p.get("music") else ""
+    yt_desc = (f"{p.get('hook', '')}\n\n{p['caption']}\n\n{src}\n📷 {cred}{mus}\n\n"
                f"🚲 ВелоПульс — вело-контент каждый день: {link}\n\n{tags} #shorts")[:4900]
     tiktok = f"{p['title']} {p['emoji']}\n{p.get('hook', '')}\n\n{tags} #велосипед #рекомендации"[:2150]
-    return {"caption": caption, "full": f"{caption}\n\n{src}\n📷 {cred}", "youtube_title": yt_title,
+    return {"caption": caption, "full": f"{caption}\n\n{src}\n📷 {cred}{mus}", "youtube_title": yt_title,
             "youtube_description": yt_desc, "tiktok": tiktok}
 
 
@@ -471,10 +525,14 @@ def main():
     MEDIA.mkdir(exist_ok=True)
     made, stats = [], {"ok": 0, "fail": 0}
     for k, p in enumerate(day["posts"][:limit] if limit else day["posts"]):
+        if os.environ.get("MEDIA_SLUG") and os.environ["MEDIA_SLUG"] not in p["slug"]:
+            continue
         if p.get("files") and not force and (p.get("release") or (MEDIA / p["files"]["video"]).exists()):
             continue
         log(f"медиа: {p['title']}")
         s = p["slug"]
+        music = pick_music(date, k)
+        p["music"] = {x: music[x] for x in ("file", "title", "author", "source", "license", "license_url", "attribution")}
         pics = [x for x in (fetch_image(i["url"]) for i in p["images"]) if x is not None]
         if not pics:
             log("  нет картинок"); stats["fail"] += 1; continue
@@ -498,13 +556,12 @@ def main():
                 z.write(MEDIA / nm, nm)
             z.writestr("текст-поста.txt", make_post(p)["full"])
         mp3 = MEDIA / f"{s}.mp3"
-        voice = VOICES[k % len(VOICES)]
-        words, voice = tts(p["narration"], mp3, voice)
+        words, voice = tts(p["narration"], mp3)
         mp4 = MEDIA / f"{s}.mp4"
         work = MEDIA / "_work"
         work.mkdir(exist_ok=True)
         try:
-            total, synced = build_video(p, slides, pics[0], mp3, words, mp4, work)
+            total, synced = build_video(p, slides, pics[0], mp3, words, mp4, work, music)
         except Exception as e:  # noqa
             log("  видео:", e); stats["fail"] += 1; total, synced = 0, False
         for f in work.iterdir():

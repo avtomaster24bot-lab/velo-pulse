@@ -3,7 +3,8 @@
 
 Нужно: TELEGRAM_BOT_TOKEN (секрет репозитория). Канал — TELEGRAM_CHAT_ID или "telegram_chat" в topics.json
 (по умолчанию @velopark_kz). Бот должен быть администратором канала с правом публикации.
-Для каждого поста: альбом-карусель слайдов с подписью + аудио-рассказ. TELEGRAM_SEND_VIDEO=1 — ещё и вертикальное видео.
+Для каждого поста (режим video, по умолчанию): вертикальное видео из слайдов (мужской голос + фоновая музыка)
+с подписью. TELEGRAM_MODE=album — по-старому: альбом слайдов + аудио.
 Уже отправленные посты запоминаются в data/telegram.json, повторно не уходят.
 """
 import html
@@ -20,7 +21,7 @@ from common import CFG, DATA, ROOT, SITE, load_json, save_json  # noqa
 
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 CHATS = [c.strip() for c in (os.environ.get("TELEGRAM_CHAT_ID") or CFG.get("telegram_chat", "")).split(",") if c.strip()]
-SEND_VIDEO = os.environ.get("TELEGRAM_SEND_VIDEO") == "1"
+MODE = (os.environ.get("TELEGRAM_MODE") or CFG.get("telegram_mode") or "video").strip()  # video | album
 MEDIA = ROOT / "media"
 e = html.escape
 
@@ -54,7 +55,8 @@ def caption(p):
     srcs = " · ".join(f"<a href=\"{e(s['url'])}\">{e(s['name'][:60])}</a>" for s in p["sources"][:2])
     tags = " ".join(p["hashtags"][:6])
     head = f"{p['emoji']} <b>{e(p['title'])}</b>\n<i>{e(p.get('hook', ''))}</i>\n\n"
-    tail = f"\n\n📎 {srcs}\n🎧 <a href=\"{link}\">Слушать и смотреть на сайте</a>\n{e(tags)}"
+    mus = f"\n🎵 Музыка: «{e(p['music']['title'])}», Kevin MacLeod (CC BY 4.0)" if p.get("music") else ""
+    tail = f"\n\n📎 {srcs}\n🌐 <a href=\"{link}\">Пост на сайте</a>{mus}\n{e(tags)}"
     body = e(p["caption"])
     room = 1024 - len(head) - len(tail) - 5
     if len(body) > room:  # лимит подписи 1024 символа (с разметкой)
@@ -62,7 +64,29 @@ def caption(p):
     return head + body + tail
 
 
+def send_video(chat, p):
+    f = p["files"]
+    data = {"chat_id": chat, "caption": caption(p), "parse_mode": "HTML", "supports_streaming": "true",
+            "width": 1080, "height": 1920, "duration": int(f.get("video_duration") or 0)}
+    kind, v = src(p, f["video"])
+    if kind == "file":
+        files = {"video": (v.name, open(v, "rb"), "video/mp4")}
+        pk, pv = src(p, f.get("poster", ""))
+        if f.get("poster") and pk == "file":
+            files["thumbnail"] = (pv.name, open(pv, "rb"), "image/jpeg")
+        try:
+            r = call("sendVideo", data=data, files=files)
+        finally:
+            for x in files.values():
+                x[1].close()
+    else:
+        r = call("sendVideo", data={**data, "video": v})
+    return r is not None and r.ok
+
+
 def send_post(chat, p):
+    if MODE == "video" and p["files"].get("video"):
+        return send_video(chat, p)
     files, media, opened = {}, [], []
     for i, nm in enumerate(p["files"]["slides"][:10]):
         kind, v = src(p, nm)
@@ -89,15 +113,6 @@ def send_post(chat, p):
     else:
         r2 = call("sendAudio", data={**data, "audio": v})
     ok = ok and r2 is not None and r2.ok
-    if SEND_VIDEO and p["files"].get("video"):
-        kind, v = src(p, p["files"]["video"])
-        vd = {"chat_id": chat, "caption": f"🎬 {e(p['title'])}", "parse_mode": "HTML", "supports_streaming": "true",
-              "width": 1080, "height": 1920}
-        if kind == "file":
-            with open(v, "rb") as fh:
-                call("sendVideo", data=vd, files={"video": (v.name, fh, "video/mp4")})
-        else:
-            call("sendVideo", data={**vd, "video": v})
     return ok
 
 
@@ -115,7 +130,7 @@ def main():
             rubs = "\n".join(f"{p['emoji']} {e(p['title'])}" for p in todo)
             call("sendMessage", data={"chat_id": chat, "parse_mode": "HTML", "disable_web_page_preview": "true",
                                       "text": f"🚲 <b>ВелоПульс — {date}</b>\nСегодня в подборке {len(todo)} постов:\n\n{rubs}\n\n"
-                                              f"🎧 Аудио, слайды и видео: {SITE}#/day/{date}"})
+                                              f"🎬 Видео, слайды и тексты: {SITE}#/day/{date}"})
         okc = 0
         for p in todo:
             if send_post(chat, p):

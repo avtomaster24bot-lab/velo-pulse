@@ -40,7 +40,7 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ vars.TELEGRAM_CHAT_ID || '@velopark_kz' }}
-      TELEGRAM_SEND_VIDEO: ${{ vars.TELEGRAM_SEND_VIDEO }}
+      TELEGRAM_MODE: ${{ vars.TELEGRAM_MODE }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

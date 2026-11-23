@@ -28,19 +28,22 @@
     const f = p.files || {};
     const img = p.images?.[0];
     const prev = (f.previews || []).map((n, i) => `<img loading="lazy" src="${murl(p, n)}" alt="Слайд ${i + 1}" data-slide="${esc(p.slug)}" data-i="${i}">`).join("");
+    const media = f.video
+      ? `<div class="vid"><video controls playsinline preload="none" poster="${murl(p, f.poster)}" src="${murl(p, f.video)}"></video>
+           <span class="rub">${p.emoji} ${esc(p.rubric_name)}</span>${f.video_duration ? `<span class="dur">🎬 ${Math.round(f.video_duration)} с</span>` : ""}</div>`
+      : `<div class="cover" data-open="${esc(p.slug)}">${f.photo ? `<img loading="lazy" src="${murl(p, f.photo)}" alt="${esc(p.title)}">` : img ? `<img loading="lazy" src="${esc(thumb(img.url))}" alt="${esc(p.title)}">` : ""}
+           <span class="rub">${p.emoji} ${esc(p.rubric_name)}</span></div>`;
     return `<article class="card" style="--c:${p.color}">
-      <div class="cover" data-open="${esc(p.slug)}">${f.photo ? `<img loading="lazy" src="${murl(p, f.photo)}" alt="${esc(p.title)}">` : img ? `<img loading="lazy" src="${esc(thumb(img.url))}" alt="${esc(p.title)}">` : ""}
-        <span class="rub">${p.emoji} ${esc(p.rubric_name)}</span>${f.audio_duration ? `<span class="dur">🎧 ${Math.round(f.audio_duration)} с</span>` : ""}</div>
+      ${media}
       <div class="body">
         <h3><a href="#/p/${esc(p.slug)}">${esc(p.title)}</a></h3>
         <p class="hook">${esc(p.hook)}</p>
         <p class="cap">${esc(p.caption)}</p>
-        ${prev ? `<div class="strip">${prev}</div>` : ""}
         <div class="acts">
-          ${f.audio ? `<button class="btn" data-play="${esc(p.slug)}">▶ Слушать</button>` : ""}
-          ${f.video ? `<button class="btn" data-video="${esc(p.slug)}">🎬 Видео</button>` : ""}
+          ${f.video ? `<a class="btn primary sm" href="${murl(p, f.video)}" download>⬇ Скачать видео</a>` : ""}
           <button class="btn" data-copy="caption" data-slug="${esc(p.slug)}">📋 Скопировать текст</button>
-          <a class="btn" href="#/p/${esc(p.slug)}">Подробнее →</a>
+          <a class="btn" href="#/p/${esc(p.slug)}">Слайды и тексты →</a>
+          ${f.audio ? `<button class="btn" data-play="${esc(p.slug)}" title="Только голос, без музыки">🎧 Аудио</button>` : ""}
         </div>
       </div></article>`;
   }
@@ -78,8 +81,10 @@
       <div>
         <span class="rub" style="position:static;display:inline-block;background:${p.color}">${p.emoji} ${esc(p.rubric_name)}</span>
         <h2>${esc(p.title)}</h2><p class="hook">${esc(p.hook)}</p>
-        <img class="big" src="${f.photo ? murl(p, f.photo) : esc(img.url)}" alt="${esc(p.title)}">
-        <p class="credit">${p.images.map((i) => `<a href="${esc(i.source)}" target="_blank" rel="noopener">${esc(i.credit)}</a>`).join(" · ")}</p>
+        ${f.video ? `<div class="mainvid"><video controls playsinline preload="metadata" poster="${murl(p, f.poster)}" src="${murl(p, f.video)}"></video></div>
+          <div class="acts" style="justify-content:center;margin:10px 0"><a class="btn primary" href="${murl(p, f.video)}" download>⬇ Скачать видео (${f.video_mb} МБ)</a></div>` :
+          `<img class="big" src="${f.photo ? murl(p, f.photo) : esc(img.url)}" alt="${esc(p.title)}">`}
+        <p class="credit">${p.images.map((i) => `<a href="${esc(i.source)}" target="_blank" rel="noopener">${esc(i.credit)}</a>`).join(" · ")}${p.music ? ` · 🎵 <a href="${esc(p.music.source)}" target="_blank" rel="noopener">«${esc(p.music.title)}» — ${esc(p.music.author)}</a>, <a href="${esc(p.music.license_url)}" target="_blank" rel="noopener">${esc(p.music.license)}</a>` : ""}</p>
         <div class="acts" style="margin:14px 0">
           ${f.audio ? `<button class="btn primary" data-play="${esc(p.slug)}">▶ Слушать (${Math.round(f.audio_duration || 0)} с)</button>` : ""}
           <button class="btn" data-copy="caption" data-slug="${esc(p.slug)}">📋 Скопировать текст</button>
@@ -92,16 +97,15 @@
           <div class="acts" style="margin-top:12px">${f.zip ? `<a class="btn" href="${murl(p, f.zip)}" download>⬇ Скачать все слайды (ZIP)</a>` : ""}</div></div>
       </div>
       <div>
-        ${f.video ? `<div class="box"><h4>🎬 Видео для Reels / Shorts / TikTok</h4>
-          <video controls playsinline preload="metadata" poster="${murl(p, f.poster)}" src="${murl(p, f.video)}"></video>
-          <p class="muted">1080×1920 · ${f.video_duration} с · ${f.video_mb} МБ · субтитры вшиты</p>
-          <div class="acts"><a class="btn" href="${murl(p, f.video)}" download>⬇ Скачать видео</a></div></div>` : ""}
+        ${f.video ? `<div class="box"><h4>🎬 Видео для Reels / Shorts / TikTok / Telegram</h4>
+          <p class="muted">1080×1920 · ${f.video_duration} с · ${f.video_mb} МБ · мужской голос, фоновая музыка, субтитры вшиты</p></div>` : ""}
+        ${f.photo ? `<div class="box"><h4>📷 Фото</h4><img class="big" src="${murl(p, f.photo)}" alt=""></div>` : ""}
         <div class="box"><h4>✍️ Готовые тексты</h4><div class="acts">
           <button class="btn" data-copy="caption" data-slug="${esc(p.slug)}">Instagram / Telegram</button>
           <button class="btn" data-copy="youtube" data-slug="${esc(p.slug)}">YouTube Shorts</button>
           <button class="btn" data-copy="tiktok" data-slug="${esc(p.slug)}">TikTok</button>
           <button class="btn" data-copy="narration" data-slug="${esc(p.slug)}">Текст озвучки</button></div></div>
-        ${f.audio ? `<div class="box"><h4>🎧 Аудио</h4><audio controls preload="none" src="${murl(p, f.audio)}" style="width:100%"></audio>
+        ${f.audio ? `<div class="box"><h4>🎧 Аудио (только голос)</h4><audio controls preload="none" src="${murl(p, f.audio)}" style="width:100%"></audio>
           <div class="acts" style="margin-top:8px"><a class="btn" href="${murl(p, f.audio)}" download>⬇ MP3</a></div></div>` : ""}
       </div>
     </div>`;
@@ -181,6 +185,7 @@
     else if (d.sl) { const n = slideCtx.p.files.slides.length; slideCtx.i = (slideCtx.i + +d.sl + n) % n; showSlide(); }
     else if (d.share) { const url = location.origin + location.pathname + "#/p/" + d.share; if (navigator.share) navigator.share({ title: "ВелоПульс", url }).catch(() => {}); else { await copyText(url); toast("Ссылка скопирована"); } }
   });
+  document.addEventListener("play", (e) => { if (e.target.tagName === "VIDEO") { document.querySelectorAll("video").forEach((v) => v !== e.target && v.pause()); audio.pause(); } }, true);
   window.addEventListener("hashchange", route);
   load();
 })();

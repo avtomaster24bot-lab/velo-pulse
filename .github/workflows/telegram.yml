@@ -7,10 +7,9 @@ on:
         description: "Дата подборки (ГГГГ-ММ-ДД), пусто — последняя"
         required: false
         default: ""
-      send_video:
-        description: "Отправить ещё и вертикальные видео"
-        type: boolean
-        default: false
+      mode:
+        description: "Формат: video (видео из слайдов) или album (слайды + аудио)"
+        default: "video"
 
 permissions:
   contents: write
@@ -26,7 +25,7 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ vars.TELEGRAM_CHAT_ID || '@velopark_kz' }}
-      TELEGRAM_SEND_VIDEO: ${{ inputs.send_video && '1' || vars.TELEGRAM_SEND_VIDEO }}
+      TELEGRAM_MODE: ${{ inputs.mode }}
       TELEGRAM_DATE: ${{ inputs.date }}
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +36,7 @@ jobs:
       - name: Скачать медиа
         run: |
           d="${TELEGRAM_DATE:-$(python3 -c "import json;print(json.load(open('data/index.json'))['days'][0]['date'])")}"
-          mkdir -p media && gh release download "day-$d" -p "*.png" -p "*.mp3" -p "*.mp4" -D media
+          mkdir -p media && gh release download "day-$d" -p "*.png" -p "*.mp3" -p "*.mp4" -p "*.jpg" -D media
       - name: Отправить
         working-directory: scripts
         run: python telegram.py
